@@ -1,2 +1,5 @@
-# tv-sleep-shutdown
-Code and schematics for the TV Sleep Shutdown project in (vid)
+# TV Sleep Shutdown
+
+The code and schematics were made for a TV Sleep Shutdown project on YouTube: (vid)
+
+To upload the code to your Arduino, download the folder above and open the code inside with Arduino IDE.
