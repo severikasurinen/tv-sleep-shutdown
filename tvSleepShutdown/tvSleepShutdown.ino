@@ -1,10 +1,10 @@
-const int buzzerPin = 2, relayPin = 3, motionPin = 4, irReceiverPin = 5, notifyTime = 540, sleepTime = 600; // buzzer, relay, motion sensor, and infrared receiver pins, time (in seconds) of no movement until starting notify beeps, and time (in seconds) of no movement until turning TV off
-const float checkInterval = 1.0, notifyInterval = 20.0; // time (in seconds) between checking for movement, and time (in seconds) between notify beeps
+const int buzzerPin = 2, relayPin = 3, motionPin = 4, irReceiverPin = 5, notifyTime = 270, sleepTime = 300; // buzzer, relay, motion sensor, and infrared receiver pins, time (in seconds) of no movement until starting notify beeps, and time (in seconds) of no movement until turning TV off
+const float checkInterval = 1.0, notifyInterval = 20.0; // time (in seconds) between checking for movement and time (in seconds) between notify beeps
 const bool useRemote = true; // do you want to use a remote for activating the device?
 
-int checks = 0; // number of checks since last movement detection
-bool active = false; // is device active?
-unsigned long lastNotify = 0, lastMovement = 0; // time of last notify beep, and movement detection
+int checks = 0, irTransmits = 0; // number of checks since last movement detection and number of remote controller transmissions detected
+bool active = false, irLastMode = true; // is device active and last infrared receiver mode
+unsigned long lastNotify = 0, lastMovement = 0, irTransmitStart = 0; // time of last notify beep, movement detection, and infrared transmission starting
 
 void setup()
 {
@@ -20,7 +20,7 @@ void setup()
   }
   else
   {
-    active = true;
+    active = true; // activate device
   }
   
   
@@ -65,25 +65,43 @@ void loop()
   {
     if(useRemote)
     {
-      if(!digitalRead(irReceiverPin))
+      if(digitalRead(irReceiverPin) != irLastMode) // has infrared receiver mode changed?
       {
-        active = true; // activate device
-        // reset values
-        checks = 0;
-        lastNotify = 0;
-        lastMovement = millis();
+        irLastMode = digitalRead(irReceiverPin); // set current receiver mode
+        if(irTransmitStart == 0) // is transmission start time set to default?
+        {
+          irTransmitStart = millis(); // set transmission start time
+        }
         
-        Serial.println("Device activated.");
+        if(!irLastMode) // receiving data?
+        {
+          irTransmits++; // increase transmission detection number
+        }
+        
+        if(irTransmits >= 3) // have 3 transmissions been received?
+        {
+          active = true; // activate device
+          
+          // reset values
+          irTransmits = 0;
+          irTransmitStart = 0;
+          checks = 0;
+          lastNotify = 0;
+          lastMovement = millis();
+          
+          Serial.println("Device activated.");
+        }
       }
-      else
+      if(irTransmitStart != 0 && millis() - irTransmitStart > 100) // transmission timeout
       {
-        delay(25);
+        irTransmits = 0;
+        irTransmitStart = 0;
       }
+      delay(1);
     }
     else
     {
       delay(10000); // idle
     }
-    
   }
 }
